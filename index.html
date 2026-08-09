@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MIL - Demo</title>
+<title>MIL</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/mathlive"></script>
@@ -248,7 +248,7 @@
 <div id="autosaveStatus" style="position:fixed; top:16px; left:16px; z-index:50; font-size:11px; color:var(--ink-soft); background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:4px 8px;">Autosave on</div>
 <div class="wrap">
   <header>
-    <h1 contenteditable="true">MIL — Demo</h1>
+    <h1 contenteditable="true">MIL</h1>
     <div class="sub" contenteditable="true">Formula editor for building math tests. Type or click to insert formulas, live preview, numbering that never breaks.</div>
   </header>
 
@@ -660,7 +660,6 @@ function renderQuestionGroup(container, sectionKey, label, numberOffset, firstOf
         <div class="qnum">${num}.<button type="button" class="qdelete-btn" title="Delete this question" onclick="deleteQuestion(${q.id})">✕</button></div>
         <div>
           <div class="qtext-input editable-math" contenteditable="true" data-placeholder="Type the question here..." data-id="${q.id}" data-field="text" onfocus="setActiveField(this)" onblur="saveFieldFromDom(this)" oninput="saveFieldFromDom(this)">${q.text}</div>
-          <div class="frq-label">Free response — student shows work below on the printed page.</div>
           <div class="space-controls">
             ${lines === 0
               ? `<button class="tbtn space-toggle-btn" onclick="addMoreSpace(${q.id})">+ ${SPACE_CHUNK} lines writing space</button>
