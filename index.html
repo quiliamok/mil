@@ -257,6 +257,7 @@
     <button class="mode-btn" id="modePageBtn" onclick="setMode('page')">📄 Print Preview</button>
   </div>
   <div id="examIOButtons" style="margin-bottom:12px;">
+    <button class="tbtn" onclick="newExam()">🆕 New Exam</button>
     <button class="tbtn" onclick="exportExam()">💾 Save Exam</button>
     <button class="tbtn" onclick="document.getElementById('examFileInput').click()">📂 Load Exam</button>
     <input type="file" id="examFileInput" accept="application/json" style="display:none;" onchange="importExam(event)">
@@ -1523,6 +1524,28 @@ function saveDraft() {
       if (el) { el.textContent = '✓ Saved ' + new Date().toLocaleTimeString(); }
     } catch (e) { /* storage unavailable — fail silently, autosave is best-effort */ }
   }, 500);
+}
+
+function newExam() {
+  const ok = confirm('Start a new blank exam? This clears everything currently on screen — make sure you\'ve used "Save Exam" first if you want to keep it.');
+  if (!ok) return;
+  questions = [];
+  nextId = 1;
+  frqEndSpace = 0;
+  templateBlockEnabled = true;
+  const defaults = {
+    f_school: '_______________ High School', f_teacher: 'Mrs. _______________', f_subject: 'Precalculus',
+    f_time: '45 minutes', f_title: 'Untitled Test', f_code: 'A',
+    f_numbering_mode: 'continuous', f_paper_size: 'a4', f_period_label: 'Period',
+    f_cover_page: true, f_running_header: true,
+  };
+  Object.entries(defaults).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.type === 'checkbox') el.checked = val; else el.value = val;
+  });
+  renderQuestions();
+  renderPaper();
 }
 
 function applyDraftState(draft) {
