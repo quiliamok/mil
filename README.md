@@ -2,7 +2,7 @@ Mathly in Love (MIL)
 
 Mathly In Love (MIL) is a tool for writing math exams quickly and cleanly (way cleaner than Word), built for high school math teachers.
 
-This little tool exists because my girlfriend teaches high school math, and she was struggling with formulas in Word. Sometimes it lagged, sometimes the sizing broke, sometimes the whole formula just looked wrong. So I decided to give it my best shot, even though my coding knowledge sits at about 3%. What I'm hoping for is that teachers don't have to fight both the exam content and Word at the same time. You type it out, it looks right, you print it, it looks right on paper too. That's genuinely all I wanted.
+This little tool exists because my sweetheart teaches high school math, and they were struggling with formulas in Word. Sometimes it lagged, sometimes the sizing broke, sometimes the whole formula just looked wrong. So I decided to give it my best shot, even though my coding knowledge sits at about 3%. What I'm hoping for is that teachers don't have to fight both the exam content and Word at the same time. You type it out, it looks right, you print it, it looks right on paper too. That's genuinely all I wanted.
 
 ## What's in here
 
@@ -40,4 +40,4 @@ This little tool exists because my girlfriend teaches high school math, and she 
 
 ## Something I wanted to share...
 
-I'm not a coder. I built and tested this with clumsy hands and a pretty hazy understanding of higher math. All I really want is for my girlfriend, and anyone else dealing with the same problem she was, to have an easier time at work. So if you have thoughts, feedback, or ideas, please feel free to share them. I'd genuinely be grateful.
+I'm not a coder. I built and tested this with clumsy hands and a pretty hazy understanding of higher math. All I really want is for my sweetheart, and anyone else dealing with the same problem they were, to have an easier time at work. So if you have thoughts, feedback, or ideas, please feel free to share them. I'd genuinely be grateful.
