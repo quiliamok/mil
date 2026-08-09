@@ -1,0 +1,1617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MIL - Demo</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathlive"></script>
+<script>
+  // Stop PagedJS from auto-paginating the whole app on load — we only want it
+  // to run on-demand, targeting just the print preview content.
+  window.PagedConfig = { auto: false };
+</script>
+<script src="https://unpkg.com/pagedjs/dist/paged.polyfill.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/15.1.0/math.min.js"></script>
+<style>
+  :root {
+    --bg: #f7f6f3;
+    --panel: #ffffff;
+    --ink: #1e1d1b;
+    --ink-soft: #6b6862;
+    --line: #e4e1da;
+    --accent: #2f5fb5;
+    --accent-soft: #dbe6f7;
+    --mono: 'SF Mono', 'Consolas', monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+    padding: 24px;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  header { margin-bottom: 20px; }
+  h1 { font-size: 20px; font-weight: 700; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--ink-soft); font-size: 13px; }
+
+  .layout { display: grid; grid-template-columns: 1fr 280px; gap: 16px; align-items: start; }
+  @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
+  .layout > .panel:last-child { position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow-y: auto; }
+
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+  .panel h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); margin: 0 0 12px; }
+
+  .symbol-search { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; margin-bottom: 10px; background: var(--bg); }
+  .symbol-group { margin-bottom: 14px; }
+  .symbol-group-label { font-size: 11px; font-weight: 600; color: var(--accent); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .symbol-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .symbol-btn { border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 8px 4px; cursor: pointer; font-size: 14px; transition: all .12s ease; display: flex; align-items: center; justify-content: center; min-height: 36px; }
+  .symbol-btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .symbol-btn .katex { font-size: 14px !important; }
+  .symbol-hint { font-size: 11px; color: var(--ink-soft); margin-top: 10px; line-height: 1.5; border-top: 1px dashed var(--line); padding-top: 10px; }
+  kbd { background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; font-family: var(--mono); font-size: 10px; }
+
+  .qlist { display: flex; flex-direction: column; gap: 4px; }
+  .question-row { display: grid; grid-template-columns: 32px 1fr; gap: 10px; padding: 10px 8px; border-radius: 6px; border: 1px solid transparent; }
+  .question-row.active { border-color: var(--line); background: var(--bg); }
+  .qnum { font-weight: 700; color: var(--accent); font-size: 14px; padding-top: 2px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .qdelete-btn {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: none; background: transparent; color: var(--ink-soft);
+    font-size: 11px; line-height: 18px; padding: 0; cursor: pointer;
+  }
+  .qdelete-btn:hover { background: #f5d5d5; color: #c0392b; }
+  .qtext-input { width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-size: 14px; font-family: inherit; background: var(--panel); resize: vertical; min-height: 40px; }
+  .qtext-input:focus { outline: none; border-color: var(--accent); }
+  .qpreview { margin-top: 6px; padding: 8px 10px; background: var(--panel); border: 1px dashed var(--line); border-radius: 6px; font-size: 14px; min-height: 20px; }
+
+  .editable-math { min-height: 20px; }
+  .editable-math:empty:before { content: attr(data-placeholder); color: var(--ink-soft); }
+  math-field.inline-mf {
+    display: inline-block;
+    vertical-align: middle;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    padding: 0 3px;
+    margin: 0 1px;
+    background: var(--accent-soft);
+    font-size: 1em;
+    --hue: 214;
+    --caret-color: #2f5fb5;
+    --selection-background-color: #cfe0f5;
+    --selection-color: #14335e;
+  }
+  math-field.inline-mf:focus-within { border-color: var(--accent); background: white; }
+  math-field.inline-mf:not(:focus-within):hover { border-color: #c3d5ef; cursor: text; }
+  math-field.inline-mf[read-only] { background: transparent; border-color: transparent; padding: 0; }
+
+  .mf-wrap { position: relative; display: inline-block; vertical-align: middle; }
+  .mf-delete, .mf-copy {
+    position: absolute;
+    top: -9px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid white;
+    color: white;
+    font-size: 9px;
+    line-height: 14px;
+    padding: 0;
+    cursor: pointer;
+    display: none;
+    z-index: 5;
+  }
+  .mf-delete { right: -9px; background: #c0392b; }
+  .mf-copy { right: 13px; background: var(--accent); }
+  .mf-wrap:hover .mf-delete, .mf-wrap:hover .mf-copy,
+  .mf-wrap:focus-within .mf-delete, .mf-wrap:focus-within .mf-copy {
+    display: block;
+  }
+  .paper .mf-delete, .paper .mf-copy { display: none !important; }
+  math-field::part(virtual-keyboard-toggle) { display: none; }
+  math-field::part(menu-toggle) { display: none; }
+
+  .graph-img-wrap {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+    margin: 8px 4px;
+    vertical-align: top;
+  }
+  .graph-img-wrap img { width: 100%; height: auto; display: block; border-radius: 6px; }
+  .graph-img-btn {
+    position: absolute;
+    top: -9px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid white;
+    color: white;
+    font-size: 11px;
+    line-height: 15px;
+    padding: 0;
+    cursor: pointer;
+    display: none;
+    z-index: 5;
+  }
+  .graph-img-wrap:hover .graph-img-btn { display: block; }
+  .graph-img-btn:nth-of-type(1) { right: 52px; background: #555; }
+  .graph-img-btn:nth-of-type(2) { right: 28px; background: #555; }
+  .graph-img-btn:nth-of-type(3) { right: 3px; background: #c0392b; }
+  .paper .graph-img-btn { display: none !important; }
+
+  .choices-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+  .choice-row { display: flex; align-items: center; gap: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+  .choice-row:focus-within { border-color: var(--accent); }
+  .choice-letter { font-weight: 700; color: var(--accent); font-size: 13px; min-width: 14px; }
+  .choice-input { flex: 1; border: none; background: transparent; font-size: 13px; font-family: inherit; outline: none; min-width: 0; }
+  .choices-preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; margin-top: 6px; padding: 8px 10px; background: var(--panel); border: 1px dashed var(--line); border-radius: 6px; font-size: 13.5px; }
+  .choices-preview-grid b { color: var(--accent); margin-right: 4px; }
+  .frq-label { font-size: 11px; color: var(--ink-soft); margin-top: 6px; font-style: italic; }
+  .space-toggle-btn { margin-top: 6px; font-size: 11.5px; padding: 4px 9px; }
+  .pagebreak-btn { display: block; margin-top: 6px; }
+  .pagebreak-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .space-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .space-controls .space-toggle-btn { margin-top: 0; }
+  .space-amount { font-size: 11.5px; color: var(--ink-soft); }
+
+  .toolbar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .tbtn { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 7px 12px; font-size: 12.5px; cursor: pointer; color: var(--ink); }
+  .tbtn:hover { border-color: var(--accent); color: var(--accent); }
+  .tbtn.primary { background: var(--accent); color: white; border-color: var(--accent); }
+  .tbtn.primary:hover { opacity: .9; color: white; }
+
+  .note { font-size: 12px; color: var(--ink-soft); background: var(--accent-soft); border-radius: 6px; padding: 8px 10px; margin-bottom: 14px; line-height: 1.5; }
+
+  .mode-switch { display: inline-flex; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 3px; margin-bottom: 16px; }
+  .mode-btn { border: none; background: transparent; padding: 7px 16px; font-size: 13px; font-weight: 600; border-radius: 6px; cursor: pointer; color: var(--ink-soft); }
+  .mode-btn.active { background: var(--accent); color: white; }
+
+  .settings-panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; max-width: 700px; margin-left: auto; margin-right: auto; }
+  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .settings-grid > .settings-field { min-width: 0; }
+  .settings-field label { display: block; font-size: 11px; font-weight: 600; color: var(--ink-soft); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.02em; }
+  .settings-field label.toggle-label { display: flex; align-items: center; gap: 6px; }
+  .toggle-label .field-show { flex: 0 0 auto; width: 14px; height: 14px; cursor: pointer; margin: 0; }
+  .settings-field input, .settings-field select { width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; background: var(--bg); }
+  .settings-field input:focus, .settings-field select:focus { outline: none; border-color: var(--accent); }
+
+  .page-stage { background: white; border-radius: 10px; padding: 32px 16px; display: flex; justify-content: center; }
+  .paper { background: white; width: 210mm; min-height: 297mm; box-shadow: 0 4px 18px rgba(0,0,0,0.12); padding: 8mm 6mm; font-family: 'Times New Roman', 'Georgia', serif; color: #1a1a1a; box-sizing: border-box; }
+  .paper.format-letter { width: 215.9mm; min-height: 279.4mm; }
+  .paper-q, .graph-img-wrap, .choices-preview-grid, .answer-space { break-inside: avoid; page-break-inside: avoid; }
+  .paper-header { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 2px solid #1a1a1a; padding-bottom: 12px; margin-bottom: 20px; font-size: 13px; }
+  .paper-header .left div, .paper-header .right div { margin-bottom: 2px; }
+  .paper-header .right { text-align: right; }
+  .paper-title { text-align: center; font-size: 17px; font-weight: 700; text-transform: uppercase; margin: 4px 0 2px; }
+  .paper-sub { text-align: center; font-size: 12.5px; font-style: italic; color: #444; margin-bottom: 22px; }
+  .paper-section-label { font-weight: 700; font-size: 14px; margin: 18px 0 10px; text-decoration: underline; }
+  .paper-q { display: grid; grid-template-columns: 26px 1fr; align-items: baseline; font-size: 14px; line-height: 1.7; margin-bottom: 10px; }
+  .paper-q .num { font-weight: 700; }
+  .paper math-field[read-only] { vertical-align: baseline; margin: 0; }
+  .answer-space { margin: 10px 0 6px; }
+  .answer-space .line { border-bottom: 1px solid #e2e2e2; height: 26px; }
+  .answer-space.end { margin-top: 4px; padding-top: 10px; border-top: 1px dashed #ccc; }
+  .answer-space-label { font-size: 11px; color: #777; font-style: italic; margin-bottom: 6px; }
+
+  .graph-modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 300;
+    align-items: center;
+    justify-content: center;
+  }
+  .graph-modal-backdrop.open { display: flex; }
+  .graph-modal {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    width: 520px;
+    max-width: 92vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+  }
+  #graphCanvas { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; background: white; }
+  .graph-error { color: #c0392b; font-size: 12px; margin-top: 6px; min-height: 16px; }
+  [contenteditable="true"] { outline: none; }
+  [contenteditable="true"]:hover { background: var(--accent-soft); border-radius: 4px; cursor: text; }
+  [contenteditable="true"]:focus { background: var(--accent-soft); border-radius: 4px; box-shadow: 0 0 0 2px var(--accent); }
+
+  .role-switch { position: fixed; top: 16px; right: 16px; display: inline-flex; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 3px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); z-index: 50; }
+  .role-btn { border: none; background: transparent; padding: 6px 14px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; color: var(--ink-soft); }
+  .role-btn.active { background: var(--ink); color: white; }
+  body.user-mode [contenteditable="true"] { pointer-events: none; }
+  body.user-mode [contenteditable="true"]:hover { background: transparent; cursor: default; }
+
+  @media print {
+    body { background: white; padding: 0; }
+    .role-switch, .mode-switch, #printPdfBtn, .settings-panel,
+    #editLayout, .wrap > header, .graph-modal-backdrop, #autosaveStatus, #pagedLoading, #examIOButtons {
+      display: none !important;
+    }
+    .page-stage { background: white !important; padding: 0 !important; display: block !important; }
+  }
+</style>
+</head>
+<body>
+<div class="role-switch">
+  <button class="role-btn active" id="roleAdminBtn" onclick="setRole('admin')">🔧 Admin</button>
+  <button class="role-btn" id="roleUserBtn" onclick="setRole('user')">👩‍🏫 Teacher (User)</button>
+</div>
+<div id="autosaveStatus" style="position:fixed; top:16px; left:16px; z-index:50; font-size:11px; color:var(--ink-soft); background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:4px 8px;">Autosave on</div>
+<div class="wrap">
+  <header>
+    <h1 contenteditable="true">MIL — Demo</h1>
+    <div class="sub" contenteditable="true">Formula editor for building math tests. Type or click to insert formulas, live preview, numbering that never breaks.</div>
+  </header>
+
+  <div class="mode-switch">
+    <button class="mode-btn active" id="modeEditBtn" onclick="setMode('edit')">✏️ Edit Mode</button>
+    <button class="mode-btn" id="modePageBtn" onclick="setMode('page')">📄 Print Preview</button>
+  </div>
+  <div id="examIOButtons" style="margin-bottom:12px;">
+    <button class="tbtn" onclick="exportExam()">💾 Save Exam</button>
+    <button class="tbtn" onclick="document.getElementById('examFileInput').click()">📂 Load Exam</button>
+    <input type="file" id="examFileInput" accept="application/json" style="display:none;" onchange="importExam(event)">
+  </div>
+  <button class="tbtn" id="printPdfBtn" onclick="window.print()" style="display:none; margin-bottom:16px;">🖨️ Print / Save as PDF</button>
+
+  <div class="layout" id="editLayout">
+    <div class="panel">
+      <h2 contenteditable="true">Sample Test — Full Exam</h2>
+      <div class="note" contenteditable="true">👉 Try it: delete a question, or click "Shuffle Order". Numbering updates automatically within each section, formulas never break.</div>
+      <div class="toolbar">
+        <button class="tbtn" onclick="shuffleQuestions()">🔀 Shuffle Order &amp; Answers</button>
+      </div>
+      <div class="qlist" id="qlist"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Quick Symbols</h2>
+      <input class="symbol-search" id="symSearch" placeholder="Search symbols... (e.g. limit, integral)" oninput="filterSymbols()">
+      <div id="symbolGroups"></div>
+      <div class="symbol-hint">
+        You can also type LaTeX-style syntax directly, e.g. <kbd>\frac{a}{b}</kbd>, <kbd>\sqrt{x}</kbd>, <kbd>\lim</kbd>. Custom keyboard shortcuts will be added in the real build.
+      </div>
+    </div>
+  </div>
+
+  <div class="page-stage" id="pageStage" style="display:none;">
+    <div style="display:flex; flex-direction:column; align-items:center; width:100%;">
+      <div class="settings-panel">
+        <h2 style="margin-bottom:10px;">⚙️ Template Settings</h2>
+        <div class="settings-grid">
+          <div class="settings-field"><label class="toggle-label"><input type="checkbox" class="field-show" id="f_school_show" checked onchange="renderPaper()">School Name</label><input id="f_school" value="_______________ High School" oninput="renderPaper()"></div>
+          <div class="settings-field"><label class="toggle-label"><input type="checkbox" class="field-show" id="f_teacher_show" checked onchange="renderPaper()">Teacher Name</label><input id="f_teacher" value="Mrs. _______________" oninput="renderPaper()"></div>
+          <div class="settings-field"><label class="toggle-label"><input type="checkbox" class="field-show" id="f_subject_show" checked onchange="renderPaper()">Course</label>
+            <select id="f_subject" onchange="renderPaper()">
+              <option>Algebra I</option>
+              <option>Algebra II</option>
+              <option selected>Precalculus</option>
+              <option>AP Calculus AB</option>
+              <option>AP Calculus BC</option>
+              <option>Geometry</option>
+            </select>
+          </div>
+          <div class="settings-field"><label class="toggle-label"><input type="checkbox" class="field-show" id="f_time_show" checked onchange="renderPaper()">Time Allowed</label><input id="f_time" value="45 minutes" oninput="renderPaper()"></div>
+          <div class="settings-field"><label class="toggle-label"><input type="checkbox" class="field-show" id="f_title_show" checked onchange="renderPaper()">Test Title</label><input id="f_title" value="Unit 3 Test" oninput="renderPaper()"></div>
+          <div class="settings-field"><label class="toggle-label"><input type="checkbox" class="field-show" id="f_code_show" checked onchange="renderPaper()">Version</label><input id="f_code" value="A" oninput="renderPaper()"></div>
+          <div class="settings-field">
+            <label>Question Numbering</label>
+            <select id="f_numbering_mode" onchange="renderPaper()">
+              <option value="continuous">Continuous (1 → N across both parts)</option>
+              <option value="reset">Restart each part (1 → N per part)</option>
+            </select>
+          </div>
+          <div class="settings-field">
+            <label>Paper Size</label>
+            <select id="f_paper_size" onchange="renderPaper()">
+              <option value="a4">A4</option>
+              <option value="letter">US Letter</option>
+            </select>
+          </div>
+          <div class="settings-field"><label>"Period" Label Text</label><input id="f_period_label" value="Period" oninput="renderPaper()"></div>
+        </div>
+        <div class="settings-field" style="margin-top:10px;">
+          <label style="display:flex; justify-content:flex-start; align-items:center; gap:8px; text-transform:none; font-size:13px; color:var(--ink); font-weight:500;"><input type="checkbox" id="f_running_header" checked onchange="renderPaper()" style="width:16px; height:16px; margin:0; flex:0 0 auto;">Include repeating header (Course / Teacher) on every page</label>
+        </div>
+        <div class="settings-field" style="margin-top:8px;">
+          <label style="display:flex; justify-content:flex-start; align-items:center; gap:8px; text-transform:none; font-size:13px; color:var(--ink); font-weight:500;"><input type="checkbox" id="f_cover_page" checked onchange="renderPaper()" style="width:16px; height:16px; margin:0; flex:0 0 auto;">Include a cover page before the questions</label>
+        </div>
+        <div class="settings-field" id="coverTextWrap" style="margin-top:8px;">
+          <label>Cover Page Content (edit freely — this is your workspace)</label>
+          <textarea id="f_cover_text" rows="10" style="width:100%; font-family:inherit; font-size:12.5px; padding:8px; border:1px solid var(--line); border-radius:6px; resize:vertical;" oninput="renderPaper()">Precalculus Placement Exam
+
+The Precalculus Placement Exam is intended to assess whether a student has the mathematical background and problem-solving skills necessary for Calculus readiness.
+
+The exam will contain 35 total questions
+
+Include:
+- 20 multiple-choice questions (no work required)
+- 15 short-answer questions (work must be shown clearly)
+- Be completed within 120 minutes
+
+For short-answer questions, correct work and mathematical reasoning are required for full credit. Unsupported answers may receive limited or no credit even if the final answer is correct.
+
+Students should come prepared to:
+- Manage time carefully
+- Show organized work
+- Justify mathematical steps
+- Demonstrate strong algebraic fluency and mathematical reasoning across multiple topics.</textarea>
+        </div>
+      </div>
+      <div class="paper" id="coverPaper" style="display:none;"></div>
+      <div class="paper" id="paperContent" style="display:none;"></div>
+      <div id="pagedLoading" style="display:none; padding:40px; text-align:center; color:#888;">Laying out pages…</div>
+      <div id="pagedOutput"></div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="imageUploadInput" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
+
+<div class="graph-modal-backdrop" id="graphModalBackdrop" onclick="closeGraphModal(event)">
+  <div class="graph-modal" onclick="event.stopPropagation()">
+    <h2 style="margin-bottom:10px;">📈 Insert Graph</h2>
+    <div class="settings-field" style="margin-bottom:10px;">
+      <label>Function — y =</label>
+      <input id="graphFn" value="x^2 - 3x + 2" oninput="drawGraphPreview()">
+    </div>
+    <div class="settings-grid" style="margin-bottom:10px;">
+      <div class="settings-field"><label>x min</label><input id="graphXMin" value="-5" oninput="drawGraphPreview()"></div>
+      <div class="settings-field"><label>x max</label><input id="graphXMax" value="5" oninput="drawGraphPreview()"></div>
+      <div class="settings-field"><label>y min (optional)</label><input id="graphYMin" placeholder="auto" oninput="drawGraphPreview()"></div>
+      <div class="settings-field"><label>y max (optional)</label><input id="graphYMax" placeholder="auto" oninput="drawGraphPreview()"></div>
+    </div>
+    <canvas id="graphCanvas" width="480" height="390"></canvas>
+    <div id="graphError" class="graph-error"></div>
+    <div class="toolbar" style="margin-top:12px;">
+      <button class="tbtn" onclick="closeGraphModal()">Cancel</button>
+      <button class="tbtn primary" onclick="insertGraphImage()">Insert into selected question →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SYMBOLS = [
+  { group: 'Common Symbols', items: [
+    { label: 'Blank formula', tex: '', icon: '➕' },
+    { label: 'Insert Graph', tex: '', icon: '📈', action: 'openGraph' },
+    { label: 'Upload Image', tex: '', icon: '🖼️', action: 'uploadImage' },
+    { label: '\\neq', tex: '\\neq' },
+    { label: '\\leq', tex: '\\leq' },
+    { label: '\\geq', tex: '\\geq' },
+    { label: '\\pm', tex: '\\pm' },
+    { label: '\\times', tex: '\\times' },
+    { label: '\\div', tex: '\\div' },
+    { label: '\\infty', tex: '\\infty' },
+    { label: '\\pi', tex: '\\pi' },
+    { label: '\\theta', tex: '\\theta' },
+    { label: '20^{\\circ}', tex: '^{\\circ}' },
+    { label: '\\approx', tex: '\\approx' },
+    { label: '\\in', tex: '\\in' },
+    { label: '[\\square]', tex: '\\left[\\placeholder{}\\right]' },
+    { label: '\\{\\square\\}', tex: '\\left\\{\\placeholder{}\\right\\}' },
+  ]},
+  { group: 'Fractions & Roots', items: [
+    { label: '\\frac{a}{b}', tex: '\\frac{\\placeholder{}}{\\placeholder{}}' },
+    { label: '\\sqrt{x}', tex: '\\sqrt{\\placeholder{}}' },
+    { label: '\\sqrt[3]{x}', tex: '\\sqrt[3]{\\placeholder{}}' },
+  ]},
+  { group: 'Exponents', items: [
+    { label: 'x^{n}', tex: '\\placeholder{}^{\\placeholder{}}' },
+    { label: 'x_{n}', tex: '\\placeholder{}_{\\placeholder{}}' },
+    { label: 'e^{x}', tex: 'e^{\\placeholder{}}' },
+  ]},
+  { group: 'Trigonometry', items: [
+    { label: '\\sin x', tex: '\\sin\\left(\\placeholder{}\\right)' },
+    { label: '\\cos x', tex: '\\cos\\left(\\placeholder{}\\right)' },
+    { label: '\\tan x', tex: '\\tan\\left(\\placeholder{}\\right)' },
+  ]},
+  { group: 'Limits', items: [
+    { label: '\\lim_{x\\to a}', tex: '\\lim_{x \\to \\placeholder{}} \\placeholder{}' },
+    { label: '\\lim_{x\\to\\infty}', tex: '\\lim_{x \\to \\infty} \\placeholder{}' },
+  ]},
+  { group: 'Derivatives & Integrals', items: [
+    { label: "f'(x)", tex: "\\placeholder{}'(\\placeholder{})" },
+    { label: '\\int f(x)dx', tex: '\\int \\placeholder{}\\,dx' },
+    { label: '\\int_a^b', tex: '\\int_{\\placeholder{}}^{\\placeholder{}} \\placeholder{}\\,dx' },
+  ]},
+  { group: 'Exp & Log', items: [
+    { label: '\\ln x', tex: '\\ln\\left(\\placeholder{}\\right)' },
+    { label: '\\log_{a}b', tex: '\\log_{\\placeholder{}}\\left(\\placeholder{}\\right)' },
+  ]},
+];
+
+let questions = [
+  { id: 1, section: "mc", text: "Simplify $\\dfrac{2x^2 - 8}{x-2}$ for $x \\neq 2$.", choices: { A: "$2x+4$", B: "$2x-4$", C: "$x+4$", D: "$x-4$" } },
+  { id: 2, section: "mc", text: "Simplify $\\sqrt{50}$.", choices: { A: "$5\\sqrt{2}$", B: "$25\\sqrt{2}$", C: "$10\\sqrt{2}$", D: "$2\\sqrt{5}$" } },
+  { id: 3, section: "mc", text: "Evaluate $27^{2/3}$.", choices: { A: "$9$", B: "$3$", C: "$18$", D: "$81$" } },
+  { id: 4, section: "mc", text: "Find $\\sin\\left(\\dfrac{\\pi}{3}\\right)$.", choices: { A: "$\\dfrac{\\sqrt{3}}{2}$", B: "$\\dfrac{1}{2}$", C: "$\\dfrac{\\sqrt{2}}{2}$", D: "$1$" } },
+  { id: 5, section: "mc", text: "Evaluate $\\lim_{x \\to 2} \\dfrac{x^2-4}{x-2}$.", choices: { A: "$4$", B: "$0$", C: "undefined", D: "$2$" } },
+  { id: 6, section: "mc", text: "Find $f'(x)$ for $f(x) = 3x^4 - 5x^2 + 7$.", choices: { A: "$12x^3 - 10x$", B: "$12x^3 - 10x^2$", C: "$3x^3-5x$", D: "$12x^4-10x$" } },
+  { id: 7, section: "mc", text: "Evaluate $\\int_0^1 2x\\,dx$.", choices: { A: "$1$", B: "$2$", C: "$0$", D: "$\\dfrac{1}{2}$" } },
+  { id: 8, section: "mc", text: "Simplify $\\ln(e^3)$.", choices: { A: "$3$", B: "$e^3$", C: "$3e$", D: "$1$" } },
+  { id: 9, section: "mc", text: "Solve $\\log_2(x) = 5$.", choices: { A: "$x=32$", B: "$x=10$", C: "$x=25$", D: "$x=7$" } },
+  { id: 10, section: "mc", text: "Evaluate $\\lim_{x \\to \\infty} \\dfrac{3x^2+1}{x^2-4}$.", choices: { A: "$3$", B: "$0$", C: "$\\infty$", D: "$\\dfrac{1}{4}$" } },
+  { id: 11, section: "frq", text: "Find the derivative of $f(x) = \\dfrac{x^2+1}{x-3}$ using the quotient rule. Show all steps." },
+  { id: 12, section: "frq", text: "Evaluate $\\int (4x^3 - 6x + 2)\\,dx$." },
+  { id: 13, section: "frq", text: "A ball is thrown so its height in feet is $h(t) = -16t^2 + 64t + 5$, where $t$ is in seconds. Find the maximum height and the time at which it occurs." },
+  { id: 14, section: "frq", text: "Solve for $x$: $2\\sqrt{x+3} = x-1$. Check for extraneous solutions." },
+  { id: 15, section: "frq", text: "Evaluate $\\lim_{x \\to 0} \\dfrac{1-\\cos x}{x}$ and briefly interpret what this limit represents." },
+  { id: 16, section: "frq", text: "Show that the second derivative simplifies as below (display test — nested fractions, brackets, and radicals):\n$f''(c) = \\frac{1}{2}(9-x)^{\\frac{-1}{2}}(9-x)' - \\left[\\frac{1}{2}x'(9-x)^{\\frac{-1}{2}} + \\frac{1}{2}x\\left[(9-x)^{\\frac{-1}{2}}\\right]'\\right]$\n$= \\frac{-1}{2}(9-x)^{\\frac{-1}{2}} - \\frac{1}{2}(9-x)^{\\frac{-1}{2}} + \\frac{1}{4}x(9-x)^{\\frac{-3}{2}}(9-x)' = -(9-x)^{\\frac{-1}{2}} - \\frac{1}{4}x(9-x)^{\\frac{-3}{2}}$\n$= -\\frac{1}{\\sqrt{9-x}} - \\frac{x}{4(9-x)\\sqrt{9-x}} = \\frac{-4(9-x)-x}{4(9-x)\\sqrt{9-x}} = \\frac{3x-36}{4(9-x)\\sqrt{9-x}} = \\frac{(3x-36)\\sqrt{9-x}}{4(9-x)^2}$" },
+  { id: 17, section: "mc", text: "Which of the following is the vertex of $f(x) = x^2 - 4$?", choices: { A: "$(0,-4)$", B: "$(0,4)$", C: "$(-4,0)$", D: "$(4,0)$" } },
+  { id: 18, section: "frq", text: "Sketch the graph of $f(x) = x^2 - 4$ (display test — inserted graph image). Identify the vertex and any x-intercepts." },
+];
+let nextId = 19;
+let activeId = 1;
+let activeInputEl = null;
+let frqEndSpace = 0; // lines of writing space added after the whole FRQ section
+let templateBlockEnabled = true; // Name/Period/Time info block before Question 1
+
+// One-time conversion: seed data was authored with $...$ for convenience,
+// but from here on every field stores real rendered HTML (WYSIWYG).
+questions.forEach(q => {
+  q.text = convertLatexToHtml(q.text);
+  if (q.choices) {
+    ['A','B','C','D'].forEach(letter => { q.choices[letter] = convertLatexToHtml(q.choices[letter]); });
+  }
+});
+
+// Sample graph image appended after LaTeX conversion (so the <img> tag isn't HTML-escaped) —
+// simulates what clicking "Insert Graph" and inserting y = x^2 - 4 would produce.
+{
+  const graphQ = questions.find(q => q.id === 18);
+  if (graphQ) {
+    graphQ.text += '<br><span class="graph-img-wrap" style="width:360px;"><img src="data:image/png;base64,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jz32GBISEvD444+77bjz5s1D//79YbFYUFxc7LbjEikJr4CJZHDfffdh5MiRjZ6XJAnXX389br/9dlmOm5+fj549e+LZZ591en7Tpk1ISkrCyy+/bHvOYrHg6aefhkajwRtvvAGNRiNLpj/avn07fvnlF7zwwgtuOR6RUvEKmEgGffv2xbp161BWVobg4GDb8z/++COysrKwZMmSRvvU19ejoqKiRe8fEhICL6/Gn59jYmJw++23Y/HixXjiiScQFxeHY8eO4bHHHsOoUaPw3HPP2V77l7/8BYWFhVi4cCF0Ovf8KjCbzZg7dy5uu+02JCUlueWYRErFAkwkg4aexFlZWUhPTwdgLbDvvPMOxo4di0GDBjXaZ9euXZg0aVKL3n/dunWIj49v8u8efvhhLFmyBB9//DGmT5+O+++/H/Hx8Xj33XdtRTs3NxdLly6FXq93yvKvf/0LgwcPbtW/tTW+/PJL5Obm4t///rdsxyBSCxZgIhn07dsXgHMBXrx4MXJycvDRRx81uU/Pnj1bXJgiIyMv+HcNV8FLlixBVlYWjEYjvvrqK6cOTw1Xxi1lsVhQX1/fotf6+Pg02ZxdUlKCd999F4899hjCw8NbfGwiT8UCTCSDyMhIxMTE4MCBAwCA6upqvP/++7jhhhsu2PQaHByM4cOHu+T4DzzwABYtWoRDhw5h8eLFiImJuaT32759e4uvzn/99VckJiY2ev7tt99GcHAw7rnnnkvKQuQpWICJZJKSkmIrwJ9++inKy8sxffr0C76+rq4OZWVlLXrvsLAwaLXaC/79ggULAFjvuYaEhLQ89AUkJibitddea9Fro6KiGj134sQJLF68GM8//zwKCgpszxuNRphMJuTk5CAgIMAlWYnUgjNhEcnkgw8+wDvvvIN169Zh/PjxuPXWW5vt+bt161aX3AP+5JNP8Prrr2POnDmYP38+rr/+esybN69N/wZXacm/bcqUKewZTe0Kr4CJZJKSkgKLxYKnnnoKAPDoo482+3pX3AP+9ddf8cYbb2D69Om4++67cfLkSXzxxRd49NFH0bFjx1bld6UePXrgww8/bPT822+/jaqqKrzwwgtISEgQkIxIHF4BE8mktLQUAwcOBAA8+eSTeOKJJ2Q9XmZmJu68805cddVVeOuttwAAZ8+exejRo3HjjTcKvwpuyl133YXi4mL88ssvoqMQuR0n4iCSSUhICOLj4xEWFoapU6fKeqy8vDw8+OCD6NWrF1599VXb89HR0Zg4cSKWLVuG06dPy5qBiFqHV8BEMsnOzsa4cePw3HPPYcqUKaLjEJHCsAATyeTxxx/H/v37sWLFCvj4+IiOQ0QKw05YRC5UXl6OtWvXYtu2bfj555/xr3/9i8WXiJrEAkzkQps3b8b06dMRExODl19+uckFGYiIADZBExERCcFe0ERERAKwABMREQnAAkxERCQACzAREZEALMBEREQCsAATEREJwAJMREQkAAswERGRACzAREREArAAExERCfD/f54SP+8EHZgAAAAASUVORK5CYII="><button type="button" class="graph-img-btn" title="Smaller" onmousedown="event.preventDefault()" onclick="resizeGraphImage(this.parentElement, 0.85)">－</button><button type="button" class="graph-img-btn" title="Bigger" onmousedown="event.preventDefault()" onclick="resizeGraphImage(this.parentElement, 1.15)">＋</button><button type="button" class="graph-img-btn" title="Remove this graph" onmousedown="event.preventDefault()" onclick="removeGraphImage(this.parentElement)">✕</button></span>';
+  }
+}
+
+function escapeAttr(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+}
+
+function mathFieldHTML(tex) {
+  // \u200B zero-width spaces on both sides keep the caret navigable around the field.
+  // Wrapping in .mf-wrap adds small 📋 (copy) and ✕ (delete) buttons shown on hover/focus —
+  // Backspace/Delete near a math-field is unreliable since it's a separate live editing
+  // component, not plain text, and native copy/paste across custom elements is inconsistent.
+  return `\u200B<span class="mf-wrap"><math-field class="inline-mf">${tex.replace(/</g,'&lt;')}</math-field><button type="button" class="mf-copy" onmousedown="event.preventDefault()" onclick="copyMathField(this)" title="Copy this formula">📋</button><button type="button" class="mf-delete" onmousedown="event.preventDefault()" onclick="deleteMathField(this)" title="Remove this formula">✕</button></span>\u200B`;
+}
+
+// Converts seed data written in $...$ syntax into ready-to-edit MathLive fields.
+// After this initial conversion, all editing happens live inside real math fields —
+// the teacher never sees or types $ / LaTeX syntax, and numbers typed next to a symbol
+// (e.g. "2" before √x) become part of the same math expression.
+function convertLatexToHtml(text) {
+  const parts = String(text).split(/(\$[^$]+\$)/g);
+  return parts.map(p => {
+    if (p.startsWith('$') && p.endsWith('$')) {
+      return mathFieldHTML(p.slice(1, -1));
+    }
+    return p.replace(/</g,'&lt;').replace(/\n/g, '<br>');
+  }).join('');
+}
+
+function deleteMathField(btn) {
+  const wrap = btn.closest('.mf-wrap');
+  if (!wrap) return;
+  const editableParent = wrap.closest('.editable-math');
+  wrap.remove();
+  if (editableParent) saveFieldFromDom(editableParent);
+}
+
+function copyMathField(btn) {
+  const wrap = btn.closest('.mf-wrap');
+  const mf = wrap ? wrap.querySelector('math-field') : null;
+  if (!mf) return;
+  const latex = mf.value;
+
+  function showResult(success) {
+    const original = btn.textContent;
+    btn.textContent = success ? '✓' : '⚠️';
+    setTimeout(() => { btn.textContent = original; }, success ? 700 : 1400);
+  }
+
+  function fallbackCopy() {
+    // works even on file:// pages where the Clipboard API is blocked —
+    // uses the older, more broadly supported copy technique
+    const ta = document.createElement('textarea');
+    ta.value = latex;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    showResult(ok);
+  }
+
+  if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+    navigator.clipboard.writeText(latex).then(() => showResult(true)).catch(fallbackCopy);
+  } else {
+    fallbackCopy();
+  }
+}
+
+// For PagedJS pagination specifically: converts live <math-field> custom elements
+// (which carry internal shadow-DOM state) into plain static KaTeX-rendered HTML.
+// PagedJS clones/splits content across page fragments during layout, which can
+// corrupt live custom elements — static KaTeX spans are just plain HTML/CSS,
+// so they survive that process safely.
+function toStaticMathHtml(html) {
+  const temp = document.createElement('div');
+  temp.innerHTML = html;
+  temp.querySelectorAll('math-field').forEach(mf => {
+    let latex = '';
+    try { latex = (typeof mf.value === 'string' && mf.value) || mf.textContent || ''; }
+    catch (e) { latex = mf.textContent || ''; }
+    latex = sanitizeLatexForKatex(latex);
+    const span = document.createElement('span');
+    span.className = 'katex-print';
+    try { katex.render(latex, span, { throwOnError: false }); }
+    catch (e) { span.textContent = latex; }
+    mf.replaceWith(span);
+  });
+  temp.querySelectorAll('.mf-copy, .mf-delete, .graph-img-btn').forEach(b => b.remove());
+  return temp.innerHTML;
+}
+
+// MathLive's serialized LaTeX sometimes uses its own extensions that KaTeX
+// (used for static print rendering) doesn't recognize — translate the known
+// ones to standard equivalents instead of letting KaTeX show a raw error.
+function sanitizeLatexForKatex(latex) {
+  latex = latex
+    .replace(/\\doubleprime/g, "''")
+    .replace(/\\prime\\prime/g, "''")
+    .replace(/\\placeholder\{\}/g, '\\square'); // any formula left unfilled prints as an empty box, not an error
+  // Force display style for the WHOLE formula so no part of it silently
+  // renders in KaTeX's smaller "cramped/script" style (this is what caused
+  // part of question 15's long derivative line to shrink mid-formula).
+  return `\\displaystyle{${latex}}`;
+}
+
+function setActiveField(el) {
+  const newActiveId = parseInt(el.dataset.id, 10);
+  activeInputEl = el;
+  if (newActiveId !== activeId) {
+    activeId = newActiveId;
+    // update the active-row highlight without rebuilding inputs (avoids stealing focus)
+    document.querySelectorAll('.question-row').forEach(row => row.classList.remove('active'));
+    const activeRow = el.closest('.question-row');
+    if (activeRow) activeRow.classList.add('active');
+  }
+}
+
+function saveFieldFromDom(el) {
+  const id = parseInt(el.dataset.id, 10);
+  const field = el.dataset.field;
+  const q = questions.find(q => q.id === id);
+  if (!q) return;
+  // sync each live math-field's current LaTeX into its own textContent
+  // so el.innerHTML captures what the teacher actually typed inside it
+  el.querySelectorAll('math-field').forEach(mf => {
+    try { if (typeof mf.value === 'string') mf.textContent = mf.value; } catch(e) {}
+  });
+  if (field === 'text') q.text = el.innerHTML;
+  else q.choices[field] = el.innerHTML;
+  saveDraft();
+}
+
+function attachMathFieldSync(container) {
+  container.querySelectorAll('math-field').forEach(mf => {
+    if (mf.dataset.synced) return; // avoid attaching duplicate listeners on re-render
+    mf.dataset.synced = '1';
+    // sync only once the teacher leaves this specific field — never while they're
+    // still typing inside it, since rewriting its content mid-keystroke was what
+    // made it feel like typing "stopped working" after the first formula
+    mf.addEventListener('blur', () => {
+      const editableParent = mf.closest('.editable-math');
+      if (editableParent) saveFieldFromDom(editableParent);
+    });
+  });
+}
+
+function renderQuestionGroup(container, sectionKey, label, numberOffset, firstOfNextGroup) {
+  const groupQuestions = questions.filter(q => q.section === sectionKey);
+  const heading = document.createElement('h2');
+  heading.style.marginTop = '18px';
+  heading.textContent = `${label} (${groupQuestions.length})`;
+  container.appendChild(heading);
+  groupQuestions.forEach((q, idx) => {
+    const row = document.createElement('div');
+    row.className = 'question-row' + (q.id === activeId ? ' active' : '');
+    const num = numberOffset + idx + 1;
+    // the button at the end of this question controls whether the NEXT one starts a fresh page —
+    // for the very last question in this group, "next" is the first question of the following section
+    const nextQ = groupQuestions[idx + 1] || (idx === groupQuestions.length - 1 ? firstOfNextGroup : undefined);
+    const pageBreakBtnHTML = nextQ
+      ? `<button class="tbtn space-toggle-btn pagebreak-btn${nextQ.pageBreakBefore ? ' active' : ''}" onclick="togglePageBreak(${nextQ.id})">${nextQ.pageBreakBefore ? '✕ Remove page break' : '⤓ Start new page from here'}</button>`
+      : '';
+    if (q.section === 'mc') {
+      row.innerHTML = `
+        <div class="qnum">${num}.<button type="button" class="qdelete-btn" title="Delete this question" onclick="deleteQuestion(${q.id})">✕</button></div>
+        <div>
+          <div class="qtext-input editable-math" contenteditable="true" data-placeholder="Type the question here..." data-id="${q.id}" data-field="text" onfocus="setActiveField(this)" onblur="saveFieldFromDom(this)" oninput="saveFieldFromDom(this)">${q.text}</div>
+          <div class="choices-grid">
+            ${['A','B','C','D'].map(letter => `
+              <div class="choice-row">
+                <span class="choice-letter">${letter}.</span>
+                <div class="choice-input editable-math" contenteditable="true" data-placeholder="answer" data-id="${q.id}" data-field="${letter}" onfocus="setActiveField(this)" onblur="saveFieldFromDom(this)" oninput="saveFieldFromDom(this)">${q.choices[letter]}</div>
+              </div>
+            `).join('')}
+          </div>
+          ${pageBreakBtnHTML}
+        </div>
+      `;
+    } else {
+      const lines = q.answerSpace || 0;
+      row.innerHTML = `
+        <div class="qnum">${num}.<button type="button" class="qdelete-btn" title="Delete this question" onclick="deleteQuestion(${q.id})">✕</button></div>
+        <div>
+          <div class="qtext-input editable-math" contenteditable="true" data-placeholder="Type the question here..." data-id="${q.id}" data-field="text" onfocus="setActiveField(this)" onblur="saveFieldFromDom(this)" oninput="saveFieldFromDom(this)">${q.text}</div>
+          <div class="frq-label">Free response — student shows work below on the printed page.</div>
+          <div class="space-controls">
+            ${lines === 0
+              ? `<button class="tbtn space-toggle-btn" onclick="addMoreSpace(${q.id})">+ ${SPACE_CHUNK} lines writing space</button>
+                 <button class="tbtn space-toggle-btn" onclick="addOneLineSpace(${q.id})">+ 1 line writing space</button>`
+              : `<span class="space-amount">Writing space: ${lines} line${lines === 1 ? '' : 's'}${lines >= SPACE_CAP ? ' (full page)' : ''}</span>
+                 <button class="tbtn space-toggle-btn" onclick="addOneLineSpace(${q.id})">+ 1 line writing space</button>
+                 <button class="tbtn space-toggle-btn" onclick="addMoreSpace(${q.id})">+ ${SPACE_CHUNK} lines writing space</button>
+                 <button class="tbtn space-toggle-btn" onclick="toggleQuestionSpace(${q.id})">✕ Remove</button>`
+            }
+          </div>
+          ${pageBreakBtnHTML}
+        </div>
+      `;
+    }
+    container.appendChild(row);
+  });
+  const addBtn = document.createElement('button');
+  addBtn.className = 'tbtn';
+  addBtn.style.marginTop = '8px';
+  addBtn.textContent = sectionKey === 'mc' ? '+ Add MC Question' : '+ Add FRQ Question';
+  addBtn.onclick = () => addQuestion(sectionKey);
+  container.appendChild(addBtn);
+
+  if (sectionKey === 'frq') {
+    if (frqEndSpace === 0) {
+      const endSpaceBtn = document.createElement('button');
+      endSpaceBtn.className = 'tbtn';
+      endSpaceBtn.style.marginTop = '8px';
+      endSpaceBtn.style.marginLeft = '8px';
+      endSpaceBtn.textContent = `+ ${SPACE_CHUNK} lines writing space at the end`;
+      endSpaceBtn.onclick = addMoreEndSpace;
+      container.appendChild(endSpaceBtn);
+      const oneLineStartBtn = document.createElement('button');
+      oneLineStartBtn.className = 'tbtn';
+      oneLineStartBtn.style.marginTop = '8px';
+      oneLineStartBtn.style.marginLeft = '8px';
+      oneLineStartBtn.textContent = '+ 1 line writing space at the end';
+      oneLineStartBtn.onclick = addOneLineEndSpace;
+      container.appendChild(oneLineStartBtn);
+    } else {
+      const amountLabel = document.createElement('span');
+      amountLabel.className = 'space-amount';
+      amountLabel.style.marginLeft = '8px';
+      amountLabel.textContent = `End-of-section space: ${frqEndSpace} line${frqEndSpace === 1 ? '' : 's'}${frqEndSpace >= SPACE_CAP ? ' (full page)' : ''}`;
+      container.appendChild(amountLabel);
+      const oneLineBtn = document.createElement('button');
+      oneLineBtn.className = 'tbtn';
+      oneLineBtn.style.marginTop = '8px';
+      oneLineBtn.style.marginLeft = '8px';
+      oneLineBtn.textContent = '+ 1 line writing space';
+      oneLineBtn.onclick = addOneLineEndSpace;
+      container.appendChild(oneLineBtn);
+      const moreBtn = document.createElement('button');
+      moreBtn.className = 'tbtn';
+      moreBtn.style.marginTop = '8px';
+      moreBtn.style.marginLeft = '8px';
+      moreBtn.textContent = `+ ${SPACE_CHUNK} lines writing space`;
+      moreBtn.onclick = addMoreEndSpace;
+      container.appendChild(moreBtn);
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'tbtn';
+      removeBtn.style.marginTop = '8px';
+      removeBtn.style.marginLeft = '8px';
+      removeBtn.textContent = '✕ Remove space at the end';
+      removeBtn.onclick = toggleEndSpace;
+      container.appendChild(removeBtn);
+    }
+  }
+}
+
+const SPACE_CHUNK = 5;
+const SPACE_CAP = 30;
+
+function togglePageBreak(id) {
+  const q = questions.find(q => q.id === id);
+  if (!q) return;
+  q.pageBreakBefore = !q.pageBreakBefore;
+  renderQuestions();
+}
+
+function toggleQuestionSpace(id) {
+  const q = questions.find(q => q.id === id);
+  if (!q) return;
+  q.answerSpace = (q.answerSpace || 0) > 0 ? 0 : SPACE_CHUNK;
+  renderQuestions();
+}
+
+function addMoreSpace(id) {
+  const q = questions.find(q => q.id === id);
+  if (!q) return;
+  q.answerSpace = Math.min((q.answerSpace || 0) + SPACE_CHUNK, SPACE_CAP);
+  renderQuestions();
+}
+
+function addOneLineSpace(id) {
+  const q = questions.find(q => q.id === id);
+  if (!q) return;
+  q.answerSpace = Math.min((q.answerSpace || 0) + 1, SPACE_CAP);
+  renderQuestions();
+}
+
+function toggleEndSpace() {
+  frqEndSpace = frqEndSpace > 0 ? 0 : SPACE_CHUNK;
+  renderQuestions();
+}
+
+function addMoreEndSpace() {
+  frqEndSpace = Math.min(frqEndSpace + SPACE_CHUNK, SPACE_CAP);
+  renderQuestions();
+}
+
+function addOneLineEndSpace() {
+  frqEndSpace = Math.min(frqEndSpace + 1, SPACE_CAP);
+  renderQuestions();
+}
+
+function renderQuestions() {
+  const list = document.getElementById('qlist');
+  list.innerHTML = '';
+  list.appendChild(buildTemplateBlockUI());
+  const mcCount = questions.filter(q => q.section === 'mc').length;
+  const modeEl = document.getElementById('f_numbering_mode');
+  const continuous = modeEl && modeEl.value === 'continuous';
+  const firstFrq = questions.filter(q => q.section === 'frq')[0];
+  renderQuestionGroup(list, 'mc', 'Multiple Choice', 0, firstFrq);
+  renderQuestionGroup(list, 'frq', 'Free Response', continuous ? mcCount : 0);
+  attachMathFieldSync(list);
+  saveDraft();
+}
+
+function buildTemplateBlockUI() {
+  const wrap = document.createElement('div');
+  wrap.style.marginBottom = '14px';
+  if (templateBlockEnabled) {
+    const periodLabel = document.getElementById('f_period_label') ? (document.getElementById('f_period_label').value || 'Period') : 'Period';
+    const timeVal = document.getElementById('f_time') ? document.getElementById('f_time').value : '';
+    wrap.innerHTML = `
+      <div style="border:1px dashed var(--line); border-radius:6px; padding:8px 10px; background:var(--bg); font-size:12.5px; color:var(--ink-soft);">
+        <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:4px; color:var(--accent);">Prints before Question 1</div>
+        <div>Name: ___________________</div>
+        <div>${periodLabel}: ___________________ &nbsp;&nbsp;&nbsp; Time: ${timeVal}</div>
+      </div>
+      <button class="tbtn space-toggle-btn" onclick="toggleTemplateBlock()">✕ Remove template block</button>
+    `;
+  } else {
+    wrap.innerHTML = `<button class="tbtn space-toggle-btn" onclick="toggleTemplateBlock()">+ Add template block (Name/Period/Time) before Question 1</button>`;
+  }
+  return wrap;
+}
+
+function toggleTemplateBlock() {
+  templateBlockEnabled = !templateBlockEnabled;
+  renderQuestions();
+  renderPaper();
+}
+
+function addQuestion(section) {
+  if (section === 'mc') {
+    questions.push({ id: nextId, section: 'mc', text: 'New question stem...', choices: { A: 'a', B: 'b', C: 'c', D: 'd' } });
+  } else {
+    questions.push({ id: nextId, section: 'frq', text: 'New free-response question...' });
+  }
+  activeId = nextId;
+  nextId++;
+  renderQuestions();
+}
+
+function deleteQuestion(id) {
+  const idx = questions.findIndex(q => q.id === id);
+  if (idx === -1) return;
+  questions.splice(idx, 1);
+  // numbering is computed from array position at render time, so it updates automatically
+  renderQuestions();
+}
+
+function shuffleQuestions() {
+  ['mc', 'frq'].forEach(sectionKey => {
+    const indices = questions.map((q, i) => q.section === sectionKey ? i : -1).filter(i => i !== -1);
+    const items = indices.map(i => questions[i]);
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [items[i], items[j]] = [items[j], items[i]];
+    }
+    indices.forEach((originalIndex, k) => { questions[originalIndex] = items[k]; });
+  });
+  // also shuffle which position (A/B/C/D) each answer choice lands in —
+  // the teacher grades by hand, so the tool doesn't need to track which one is "correct"
+  questions.filter(q => q.section === 'mc').forEach(q => {
+    const letters = ['A', 'B', 'C', 'D'];
+    const values = letters.map(l => q.choices[l]);
+    for (let i = values.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [values[i], values[j]] = [values[j], values[i]];
+    }
+    letters.forEach((l, k) => { q.choices[l] = values[k]; });
+  });
+  renderQuestions();
+}
+
+function focusActive() {
+  if (activeInputEl && document.body.contains(activeInputEl)) { activeInputEl.focus(); return; }
+  const el = document.querySelector(`[data-id="${activeId}"][data-field="text"]`);
+  if (el) el.focus();
+}
+
+function insertSymbol(tex) {
+  // If the cursor is already sitting inside an existing formula, insert the
+  // new symbol right there so it merges into that same formula, instead of
+  // always creating a brand-new, separate box.
+  const active = document.activeElement;
+  if (active && active.tagName === 'MATH-FIELD') {
+    try { active.insert(tex, { focus: true }); }
+    catch (e) { try { active.insert(tex); } catch (e2) {} }
+    try {
+      active.executeCommand('moveToNextPlaceholder');
+    } catch (e) {}
+    const editableParent = active.closest('.editable-math');
+    if (editableParent) saveFieldFromDom(editableParent);
+    return;
+  }
+
+  // Otherwise, the cursor is in the surrounding plain text — create a new field there.
+  const el = activeInputEl;
+  if (!el) return;
+  el.focus();
+  const sel = window.getSelection();
+  let range;
+  if (sel.rangeCount && el.contains(sel.anchorNode)) {
+    range = sel.getRangeAt(0);
+  } else {
+    // no caret inside this field yet — place it at the end
+    range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+  }
+  range.deleteContents();
+
+  const wrap = document.createElement('span');
+  wrap.className = 'mf-wrap';
+  const mf = document.createElement('math-field');
+  mf.className = 'inline-mf';
+  mf.textContent = tex;
+  const copyBtn = document.createElement('button');
+  copyBtn.type = 'button';
+  copyBtn.className = 'mf-copy';
+  copyBtn.title = 'Copy this formula';
+  copyBtn.textContent = '📋';
+  copyBtn.addEventListener('mousedown', (e) => e.preventDefault());
+  copyBtn.addEventListener('click', () => copyMathField(copyBtn));
+  const delBtn = document.createElement('button');
+  delBtn.type = 'button';
+  delBtn.className = 'mf-delete';
+  delBtn.title = 'Remove this formula';
+  delBtn.textContent = '✕';
+  delBtn.addEventListener('mousedown', (e) => e.preventDefault());
+  delBtn.addEventListener('click', () => deleteMathField(delBtn));
+  wrap.appendChild(mf);
+  wrap.appendChild(copyBtn);
+  wrap.appendChild(delBtn);
+
+  const spacerBefore = document.createTextNode('\u200B');
+  const spacerAfter = document.createTextNode('\u200B');
+
+  const frag = document.createDocumentFragment();
+  frag.appendChild(spacerBefore);
+  frag.appendChild(wrap);
+  frag.appendChild(spacerAfter);
+  range.insertNode(frag);
+
+  attachMathFieldSync(el);
+  saveFieldFromDom(el);
+
+  // Jump straight into the first empty box (dashed placeholder) so it's obvious
+  // where to type next — no need to hunt for the right spot.
+  requestAnimationFrame(() => {
+    try {
+      mf.focus();
+      mf.executeCommand('moveToMathfieldStart');
+      mf.executeCommand('moveToNextPlaceholder');
+    } catch (e) { /* fall back to just focusing the field */ }
+  });
+}
+
+// ---- Graph insertion (accurate function plotting via math.js, drawn on canvas) ----
+let graphTargetEl = null; // remembers which field to insert the graph into
+let savedInsertRange = null; // remembers exactly where the caret was, before the modal steals focus
+
+function captureCurrentRange(target) {
+  if (!target) return null;
+  const sel = window.getSelection();
+  if (sel.rangeCount && target.contains(sel.anchorNode)) {
+    return sel.getRangeAt(0).cloneRange();
+  }
+  const r = document.createRange();
+  r.selectNodeContents(target);
+  r.collapse(false); // fallback: end of the field
+  return r;
+}
+
+function openGraphModal() {
+  // remember where to insert: whatever field/formula was last active
+  graphTargetEl = (activeInputEl && document.body.contains(activeInputEl)) ? activeInputEl : null;
+  savedInsertRange = captureCurrentRange(graphTargetEl);
+  document.getElementById('graphModalBackdrop').classList.add('open');
+  drawGraphPreview();
+}
+
+function closeGraphModal(e) {
+  if (e && e.target !== document.getElementById('graphModalBackdrop')) return;
+  document.getElementById('graphModalBackdrop').classList.remove('open');
+}
+
+function drawGraphPreview() {
+  const canvas = document.getElementById('graphCanvas');
+  const ctx = canvas.getContext('2d');
+  const errEl = document.getElementById('graphError');
+  errEl.textContent = '';
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  const fnText = document.getElementById('graphFn').value.trim();
+  let xMin = parseFloat(document.getElementById('graphXMin').value);
+  let xMax = parseFloat(document.getElementById('graphXMax').value);
+  if (!isFinite(xMin) || !isFinite(xMax) || xMin >= xMax) { errEl.textContent = 'Check x min / x max.'; return; }
+
+  let compiled;
+  try { compiled = math.compile(fnText); }
+  catch (e) { errEl.textContent = 'Could not parse the function.'; return; }
+
+  // sample the function to find a sensible y-range, skipping non-finite points
+  const samples = 400;
+  const xs = [], ys = [];
+  for (let i = 0; i <= samples; i++) {
+    const x = xMin + (xMax - xMin) * (i / samples);
+    let y;
+    try { y = compiled.evaluate({ x }); } catch (e) { y = NaN; }
+    xs.push(x);
+    ys.push((typeof y === 'number' && isFinite(y)) ? y : NaN);
+  }
+  const finiteYs = ys.filter(v => isFinite(v));
+  if (finiteYs.length === 0) { errEl.textContent = 'Function has no valid values in this range.'; return; }
+
+  const yMinInput = document.getElementById('graphYMin').value.trim();
+  const yMaxInput = document.getElementById('graphYMax').value.trim();
+  let yMin, yMax;
+  if (yMinInput !== '' && yMaxInput !== '' && isFinite(parseFloat(yMinInput)) && isFinite(parseFloat(yMaxInput))) {
+    yMin = parseFloat(yMinInput);
+    yMax = parseFloat(yMaxInput);
+    if (yMin >= yMax) { errEl.textContent = 'y max must be greater than y min.'; return; }
+  } else {
+    yMin = Math.min(...finiteYs);
+    yMax = Math.max(...finiteYs);
+    if (yMin === yMax) { yMin -= 1; yMax += 1; }
+    const pad = (yMax - yMin) * 0.1;
+    yMin -= pad; yMax += pad;
+  }
+
+  const marginL = 44, marginR = 16, marginT = 16, marginB = 48;
+  const plotW = w - marginL - marginR, plotH = h - marginT - marginB;
+  const toPx = (x) => marginL + ((x - xMin) / (xMax - xMin)) * plotW;
+  const toPy = (y) => marginT + (1 - (y - yMin) / (yMax - yMin)) * plotH;
+
+  // gridlines
+  ctx.strokeStyle = '#eee'; ctx.lineWidth = 1;
+  const xStep = niceStep(xMax - xMin), yStep = niceStep(yMax - yMin);
+  for (let gx = Math.ceil(xMin / xStep) * xStep; gx <= xMax; gx += xStep) {
+    ctx.beginPath(); ctx.moveTo(toPx(gx), marginT); ctx.lineTo(toPx(gx), h - marginB); ctx.stroke();
+  }
+  for (let gy = Math.ceil(yMin / yStep) * yStep; gy <= yMax; gy += yStep) {
+    ctx.beginPath(); ctx.moveTo(marginL, toPy(gy)); ctx.lineTo(w - marginR, toPy(gy)); ctx.stroke();
+  }
+
+  // axes
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5;
+  if (yMin <= 0 && yMax >= 0) { ctx.beginPath(); ctx.moveTo(marginL, toPy(0)); ctx.lineTo(w - marginR, toPy(0)); ctx.stroke(); }
+  if (xMin <= 0 && xMax >= 0) { ctx.beginPath(); ctx.moveTo(toPx(0), marginT); ctx.lineTo(toPx(0), h - marginB); ctx.stroke(); }
+
+  // tick labels
+  ctx.fillStyle = '#555'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+  for (let gx = Math.ceil(xMin / xStep) * xStep; gx <= xMax; gx += xStep) {
+    if (Math.abs(gx) < xStep / 1000) continue;
+    ctx.fillText(formatTick(gx), toPx(gx), h - marginB + 14);
+  }
+  ctx.textAlign = 'right';
+  for (let gy = Math.ceil(yMin / yStep) * yStep; gy <= yMax; gy += yStep) {
+    if (Math.abs(gy) < yStep / 1000) continue;
+    ctx.fillText(formatTick(gy), marginL - 6, toPy(gy) + 4);
+  }
+
+  // curve — break the line wherever the function is undefined or jumps a lot (asymptotes)
+  ctx.strokeStyle = '#2f5fb5'; ctx.lineWidth = 2.2; ctx.beginPath();
+  let started = false;
+  let prevPy = null;
+  for (let i = 0; i <= samples; i++) {
+    if (!isFinite(ys[i])) { started = false; continue; }
+    const px = toPx(xs[i]), py = toPy(ys[i]);
+    if (started && prevPy !== null && Math.abs(py - prevPy) > plotH * 0.9) {
+      started = false; // likely an asymptote — lift the pen
+    }
+    if (!started) { ctx.moveTo(px, py); started = true; }
+    else { ctx.lineTo(px, py); }
+    prevPy = py;
+  }
+  ctx.stroke();
+
+  drawMathLabel(ctx, `y = ${fnText}`, w / 2, h - 8, 13);
+}
+
+// Renders text with real superscripts (e.g. "x^2" -> x with a raised, smaller 2)
+// instead of a literal caret, so exponents look like proper math notation.
+// Supports "^n" (single char) and "^{...}" (grouped) exponents; text is centered at (cx, baselineY).
+function drawMathLabel(ctx, text, cx, baselineY, fontSize) {
+  const tokens = [];
+  const re = /\^(\{[^}]*\}|.)/g;
+  let lastIndex = 0, match;
+  while ((match = re.exec(text)) !== null) {
+    if (match.index > lastIndex) tokens.push({ text: text.slice(lastIndex, match.index), sup: false });
+    let exp = match[1];
+    if (exp.startsWith('{') && exp.endsWith('}')) exp = exp.slice(1, -1);
+    tokens.push({ text: exp, sup: true });
+    lastIndex = re.lastIndex;
+  }
+  if (lastIndex < text.length) tokens.push({ text: text.slice(lastIndex), sup: false });
+
+  ctx.fillStyle = '#333';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  const normalFont = `italic ${fontSize}px 'Times New Roman', Georgia, serif`;
+  const supFont = `italic ${Math.round(fontSize * 0.7)}px 'Times New Roman', Georgia, serif`;
+
+  // measure total width first so we can center it
+  let totalWidth = 0;
+  tokens.forEach(t => {
+    ctx.font = t.sup ? supFont : normalFont;
+    totalWidth += ctx.measureText(t.text).width;
+  });
+
+  let x = cx - totalWidth / 2;
+  tokens.forEach(t => {
+    ctx.font = t.sup ? supFont : normalFont;
+    const y = t.sup ? baselineY - fontSize * 0.35 : baselineY;
+    ctx.fillText(t.text, x, y);
+    x += ctx.measureText(t.text).width;
+  });
+}
+
+function niceStep(range) {
+  const rough = range / 8;
+  const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+  const norm = rough / mag;
+  const step = norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10;
+  return step * mag;
+}
+function formatTick(v) {
+  const r = Math.round(v * 100) / 100;
+  return Number.isInteger(r) ? String(r) : r.toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
+}
+
+function insertImageIntoField(dataUrl, target, widthPx) {
+  if (!target) {
+    alert('Click into a question first, then insert the image.');
+    return;
+  }
+  const wrap = document.createElement('span');
+  wrap.className = 'graph-img-wrap';
+  wrap.style.width = (widthPx || 360) + 'px';
+  const img = document.createElement('img');
+  img.src = dataUrl;
+  wrap.appendChild(img);
+  wrap.appendChild(makeImgControlBtn('－', 'Smaller', () => resizeGraphImage(wrap, 0.85)));
+  wrap.appendChild(makeImgControlBtn('＋', 'Bigger', () => resizeGraphImage(wrap, 1.15)));
+  wrap.appendChild(makeImgControlBtn('✕', 'Remove this image', () => removeGraphImage(wrap)));
+
+  // Use the caret position captured when the modal/file-picker was opened —
+  // the live selection can't be trusted here since focus moved away from
+  // the field while the teacher was using the modal.
+  const range = (savedInsertRange && target.contains(savedInsertRange.startContainer))
+    ? savedInsertRange
+    : (() => { const r = document.createRange(); r.selectNodeContents(target); r.collapse(false); return r; })();
+
+  range.deleteContents();
+  range.insertNode(wrap);
+
+  target.focus();
+  const newRange = document.createRange();
+  newRange.setStartAfter(wrap);
+  newRange.collapse(true);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(newRange);
+
+  saveFieldFromDom(target);
+  savedInsertRange = null;
+}
+
+function insertGraphImage() {
+  const canvas = document.getElementById('graphCanvas');
+  const dataUrl = canvas.toDataURL('image/png');
+  insertImageIntoField(dataUrl, graphTargetEl, 360);
+  closeGraphModal();
+}
+
+function triggerImageUpload() {
+  if (!activeInputEl || !document.body.contains(activeInputEl)) {
+    alert('Click into a question first, then upload the image.');
+    return;
+  }
+  graphTargetEl = activeInputEl;
+  savedInsertRange = captureCurrentRange(activeInputEl);
+  document.getElementById('imageUploadInput').click();
+}
+
+function handleImageUpload(e) {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = ''; // reset so the same file can be picked again later
+  if (!file) return;
+  const target = graphTargetEl;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const w = Math.min(img.width, 360);
+      insertImageIntoField(reader.result, target, w);
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function makeImgControlBtn(symbol, title, onClick) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'graph-img-btn';
+  btn.title = title;
+  btn.textContent = symbol;
+  btn.addEventListener('mousedown', (e) => e.preventDefault());
+  btn.addEventListener('click', onClick);
+  return btn;
+}
+
+function resizeGraphImage(wrap, factor) {
+  const current = parseFloat(wrap.style.width) || wrap.getBoundingClientRect().width;
+  const next = Math.max(120, Math.min(current * factor, 700));
+  wrap.style.width = next + 'px';
+  const editableParent = wrap.closest('.editable-math');
+  if (editableParent) saveFieldFromDom(editableParent);
+}
+
+function removeGraphImage(wrap) {
+  const editableParent = wrap.closest('.editable-math');
+  wrap.remove();
+  if (editableParent) saveFieldFromDom(editableParent);
+}
+
+function renderSymbolPanel(filter = '') {
+  const container = document.getElementById('symbolGroups');
+  container.innerHTML = '';
+  SYMBOLS.forEach(group => {
+    const items = group.items.filter(i =>
+      !filter || i.label.toLowerCase().includes(filter) || group.group.toLowerCase().includes(filter)
+    );
+    if (items.length === 0) return;
+    const groupEl = document.createElement('div');
+    groupEl.className = 'symbol-group';
+
+    const labelEl = document.createElement('div');
+    labelEl.className = 'symbol-group-label';
+    labelEl.textContent = group.group;
+    groupEl.appendChild(labelEl);
+
+    const gridEl = document.createElement('div');
+    gridEl.className = 'symbol-grid';
+    items.forEach(i => {
+      const btn = document.createElement('button');
+      btn.className = 'symbol-btn';
+      btn.addEventListener('mousedown', (e) => e.preventDefault());
+      if (i.action === 'openGraph') {
+        btn.addEventListener('click', () => openGraphModal());
+      } else if (i.action === 'uploadImage') {
+        btn.addEventListener('click', () => triggerImageUpload());
+      } else {
+        btn.addEventListener('click', () => insertSymbol(i.tex));
+      }
+      if (i.icon) {
+        const span = document.createElement('span');
+        span.title = i.label;
+        span.textContent = i.icon;
+        btn.appendChild(span);
+      } else {
+        btn.title = i.label;
+        try { katex.render(i.label, btn, { throwOnError: false }); }
+        catch (e) { btn.textContent = i.label; }
+      }
+      gridEl.appendChild(btn);
+    });
+    groupEl.appendChild(gridEl);
+    container.appendChild(groupEl);
+  });
+}
+
+function filterSymbols() {
+  const val = document.getElementById('symSearch').value.toLowerCase();
+  renderSymbolPanel(val);
+}
+
+function setMode(mode) {
+  document.getElementById('modeEditBtn').classList.toggle('active', mode === 'edit');
+  document.getElementById('modePageBtn').classList.toggle('active', mode === 'page');
+  document.getElementById('editLayout').style.display = mode === 'edit' ? 'grid' : 'none';
+  document.getElementById('pageStage').style.display = mode === 'page' ? 'flex' : 'none';
+  document.getElementById('printPdfBtn').style.display = mode === 'page' ? 'inline-block' : 'none';
+  if (mode === 'page') renderPaper();
+}
+
+function renderPaper() {
+  saveDraft();
+  const el = document.getElementById('paperContent');
+  const shown = id => { const cb = document.getElementById(id + '_show'); return cb ? cb.checked : true; };
+  const school = document.getElementById('f_school').value;
+  const teacher = document.getElementById('f_teacher').value;
+  const subject = document.getElementById('f_subject').value;
+  const time = document.getElementById('f_time').value;
+  const title = document.getElementById('f_title').value;
+  const code = document.getElementById('f_code').value;
+  const numberingMode = document.getElementById('f_numbering_mode').value; // 'continuous' or 'reset'
+  const paperSize = document.getElementById('f_paper_size').value; // 'a4' or 'letter'
+  const mcQuestions = questions.filter(q => q.section === 'mc');
+
+  // ---- cover page (optional, teacher-editable) ----
+  const showCover = document.getElementById('f_cover_page').checked;
+  const coverWrap = document.getElementById('coverTextWrap');
+  const coverPaper = document.getElementById('coverPaper');
+  coverWrap.style.display = showCover ? 'block' : 'none';
+  // Note: #coverPaper stays permanently hidden (display:none) — it's only a
+  // data source for PagedJS to read from, never shown directly. Toggling its
+  // visibility here was the actual bug causing an extra unstyled page.
+  if (showCover) {
+    const coverText = document.getElementById('f_cover_text').value;
+    coverPaper.innerHTML = coverText
+      .split('\n\n')
+      .map(block => {
+        const lines = block.split('\n');
+        if (lines.every(l => l.trim().startsWith('-'))) {
+          return '<ul style="margin:6px 0 6px 20px; padding:0;">' + lines.map(l => `<li>${l.replace(/^-\s*/, '')}</li>`).join('') + '</ul>';
+        }
+        return `<p style="margin:0 0 12px;">${block.replace(/\n/g, '<br>')}</p>`;
+      })
+      .join('');
+  }
+
+  const periodLabel = document.getElementById('f_period_label').value || 'Period';
+  const infoBlockHTML = templateBlockEnabled ? `
+    <div class="info-block">
+      ${shown('f_school') ? `<div>${school}</div>` : ''}
+      <div>Name: ___________________</div>
+      <div>${periodLabel}: ___________________ &nbsp;&nbsp;&nbsp; ${shown('f_time') ? `Time: ${time}` : ''}</div>
+    </div>
+  ` : '';
+
+  el.innerHTML = `
+    ${infoBlockHTML}
+    ${shown('f_title') ? `<div class="paper-title">${title}</div>` : ''}
+    ${shown('f_code') ? `<div class="paper-sub">(Version ${code})</div>` : ''}
+    <div class="paper-section-label">Part I — Multiple Choice</div>
+    <div id="paperMC"></div>
+    <div class="paper-section-label">Part II — Free Response</div>
+    <div id="paperFRQ"></div>
+  `;
+  const mcContainer = document.getElementById('paperMC');
+  mcQuestions.forEach((q, idx) => {
+    const row = document.createElement('div');
+    row.className = 'paper-q';
+    if (q.pageBreakBefore) row.style.breakBefore = 'page';
+    row.innerHTML = `<div class="num">${idx + 1}.</div>
+      <div>
+        <div>${toStaticMathHtml(q.text)}</div>
+        <div class="choices-preview-grid" style="border:none; background:transparent; padding:4px 0 0;">
+          ${['A','B','C','D'].map(letter => `<div><b>${letter}.</b>${toStaticMathHtml(q.choices[letter])}</div>`).join('')}
+        </div>
+      </div>`;
+    mcContainer.appendChild(row);
+  });
+  const frqContainer = document.getElementById('paperFRQ');
+  const linesHTML = (count) => Array.from({length: count}, () => '<div class="line"></div>').join('');
+  const frqQuestions = questions.filter(q => q.section === 'frq');
+  const frqStart = numberingMode === 'continuous' ? mcQuestions.length : 0;
+  frqQuestions.forEach((q, idx) => {
+    const row = document.createElement('div');
+    row.className = 'paper-q';
+    if (q.pageBreakBefore) row.style.breakBefore = 'page';
+    row.innerHTML = `<div class="num">${frqStart + idx + 1}.</div><div>${toStaticMathHtml(q.text)}</div>`;
+    frqContainer.appendChild(row);
+    if ((q.answerSpace || 0) > 0) {
+      const space = document.createElement('div');
+      space.className = 'answer-space';
+      space.innerHTML = linesHTML(q.answerSpace);
+      frqContainer.appendChild(space);
+    }
+  });
+  if (frqEndSpace > 0 && frqQuestions.length > 0) {
+    const space = document.createElement('div');
+    space.className = 'answer-space end';
+    space.innerHTML = `<div class="answer-space-label">Show your work below:</div>${linesHTML(frqEndSpace)}`;
+    frqContainer.appendChild(space);
+  }
+
+  schedulePagedPreview(paperSize, subject, teacher);
+}
+
+let pagedRenderToken = 0;
+let pagedRenderChain = Promise.resolve(); // ensures renders run one at a time, never overlapping
+
+function schedulePagedPreview(paperSize, courseText, teacherText) {
+  const myToken = ++pagedRenderToken;
+  pagedRenderChain = pagedRenderChain
+    .then(() => { if (myToken === pagedRenderToken) return runPagedPreview(paperSize, courseText, teacherText, myToken); })
+    .catch(err => console.error('PagedJS chain error:', err));
+  return pagedRenderChain;
+}
+
+async function runPagedPreview(paperSize, courseText, teacherText, myToken) {
+  const outputEl = document.getElementById('pagedOutput');
+  const loadingEl = document.getElementById('pagedLoading');
+
+  const showCover = document.getElementById('f_cover_page').checked;
+  const showHeader = document.getElementById('f_running_header').checked;
+  const coverPaper = document.getElementById('coverPaper');
+  const mainPaper = document.getElementById('paperContent');
+
+  // Real DOM elements (not a CSS content string) for the repeating header —
+  // this is the reliable way to get 2 separate lines on every page.
+  const headerHTML = showHeader ? `
+    <div id="runningHeader">
+      <div class="ph-course">${escapeHtmlText(courseText)}</div>
+      <div class="ph-teacher">${escapeHtmlText(teacherText)}</div>
+    </div>
+  ` : '';
+
+  let contentHTML = headerHTML;
+  if (showCover) {
+    contentHTML += `<div class="paged-cover">${coverPaper.innerHTML}</div>`;
+  }
+  contentHTML += `<div class="paged-main${showCover ? ' with-cover-break' : ''}">${mainPaper.innerHTML}</div>`;
+
+  const pageDims = paperSize === 'letter' ? 'letter' : 'A4';
+  const GAP = '5mm'; // page edge → header = header → content
+
+  const cssText = `
+    @page {
+      size: ${pageDims};
+      margin-top: ${showHeader ? '18mm' : '10mm'};
+      margin-right: 15mm;
+      margin-bottom: 9mm;
+      margin-left: 15mm;
+      @top-right {
+        content: ${showHeader ? 'element(pageHeader)' : 'none'};
+        vertical-align: bottom;
+      }
+      @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+        font-family: -apple-system, sans-serif;
+        font-size: 7.5pt;
+        color: #aaa;
+        padding-bottom: ${GAP};
+        vertical-align: bottom;
+      }
+    }
+    #runningHeader {
+      position: running(pageHeader);
+      text-align: right;
+      font-family: 'Times New Roman', Georgia, serif;
+      font-style: italic;
+      font-size: 8.5pt;
+      color: #333;
+      padding-top: ${GAP};
+      padding-bottom: ${GAP};
+    }
+    #runningHeader .ph-course, #runningHeader .ph-teacher { line-height: 1.3; }
+    body { margin: 0; font-family: 'Times New Roman', Georgia, serif; color: #1a1a1a; }
+    .paged-main.with-cover-break { break-before: page; }
+    .paper-q { break-inside: avoid; margin-bottom: 10px; font-size: 11pt; line-height: 1.6; }
+    .paper-title { font-size: 15pt; font-weight: 700; text-align: center; margin: 6pt 0 2pt; text-transform: uppercase; }
+    .paper-sub { font-size: 11pt; font-style: italic; text-align: center; color: #444; margin-bottom: 14pt; }
+    .paper-section-label { font-weight: 700; font-size: 12pt; margin: 14pt 0 8pt; text-decoration: underline; }
+    .paper-header { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 2px solid #1a1a1a; padding-bottom: 10pt; margin-bottom: 16pt; font-size: 10.5pt; }
+    .paper-header .right { text-align: right; }
+    .choices-preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3pt 8pt; margin-top: 3pt; font-size: 10.5pt; }
+    .choices-preview-grid b { color: #2f5fb5; margin-right: 3pt; }
+    .answer-space { margin-bottom: 16pt; }
+    .answer-space .line { border-bottom: 1px solid #e2e2e2; height: 20pt; }
+    .answer-space.end { border-top: 1px dashed #ccc; padding-top: 5pt; }
+    .answer-space-label { font-size: 9pt; color: #777; font-style: italic; }
+    .katex-print { font-size: 1em; }
+    .paper-q br + .katex-print { display: inline-block; margin-top: 10pt; }
+    .graph-img-wrap { display: inline-block; }
+    .graph-img-wrap img { max-width: 100%; }
+    .info-block { border: 1px solid #ddd; border-radius: 4px; padding: 8pt 10pt; margin-bottom: 12pt; font-size: 10.5pt; }
+    .info-block > div { margin-bottom: 3pt; }
+  `;
+  const cssBlob = new Blob([cssText], { type: 'text/css' });
+  const cssURL = URL.createObjectURL(cssBlob);
+
+  // keep the "working…" message OUTSIDE the render target, so it can never
+  // end up as leftover content that gets printed alongside the real pages
+  loadingEl.style.display = 'block';
+  outputEl.innerHTML = '';
+
+  try {
+    const previewer = new Paged.Previewer();
+    await previewer.preview(contentHTML, [cssURL], outputEl);
+    if (myToken !== pagedRenderToken) { outputEl.innerHTML = ''; return; } // superseded by a newer render — discard
+  } catch (e) {
+    if (myToken === pagedRenderToken) {
+      outputEl.innerHTML = '<div style="padding:20px; color:#c0392b;">Could not lay out pages. Falling back to a simple preview — the "Print / Save as PDF" button still works.</div>';
+    }
+    console.error('PagedJS render failed:', e);
+  } finally {
+    if (myToken === pagedRenderToken) loadingEl.style.display = 'none';
+    URL.revokeObjectURL(cssURL);
+  }
+}
+
+function escapeHtmlText(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+function setRole(role) {
+  document.getElementById('roleAdminBtn').classList.toggle('active', role === 'admin');
+  document.getElementById('roleUserBtn').classList.toggle('active', role === 'user');
+  document.body.classList.toggle('user-mode', role === 'user');
+  // in user mode, force back to edit view so the teacher only sees the working surface
+  if (role === 'user') setMode('edit');
+}
+
+// ---- Autosave (localStorage) — saves progress on every change, no network needed ----
+const AUTOSAVE_KEY = 'mil_exam_draft_v1';
+let autosaveTimer = null;
+
+function collectDraftState() {
+  const get = id => { const el = document.getElementById(id); return el ? (el.type === 'checkbox' ? el.checked : el.value) : undefined; };
+  return {
+    savedAt: Date.now(),
+    questions, nextId, frqEndSpace, templateBlockEnabled,
+    settings: {
+      f_school: get('f_school'), f_teacher: get('f_teacher'), f_subject: get('f_subject'),
+      f_time: get('f_time'), f_title: get('f_title'), f_code: get('f_code'),
+      f_numbering_mode: get('f_numbering_mode'), f_cover_page: get('f_cover_page'), f_cover_text: get('f_cover_text'),
+      f_paper_size: get('f_paper_size'), f_period_label: get('f_period_label'), f_running_header: get('f_running_header'),
+    }
+  };
+}
+
+function saveDraft() {
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(collectDraftState()));
+      const el = document.getElementById('autosaveStatus');
+      if (el) { el.textContent = '✓ Saved ' + new Date().toLocaleTimeString(); }
+    } catch (e) { /* storage unavailable — fail silently, autosave is best-effort */ }
+  }, 500);
+}
+
+function applyDraftState(draft) {
+  questions = draft.questions;
+  nextId = draft.nextId || nextId;
+  frqEndSpace = draft.frqEndSpace || 0;
+  templateBlockEnabled = draft.templateBlockEnabled !== undefined ? draft.templateBlockEnabled : true;
+  Object.entries(draft.settings || {}).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (!el || val === undefined) return;
+    if (el.type === 'checkbox') el.checked = val; else el.value = val;
+  });
+  renderQuestions();
+  renderPaper();
+}
+
+function restoreDraftIfAny() {
+  let raw;
+  try { raw = localStorage.getItem(AUTOSAVE_KEY); } catch (e) { return; }
+  if (!raw) return;
+  let draft;
+  try { draft = JSON.parse(raw); } catch (e) { return; }
+  if (!draft || !Array.isArray(draft.questions) || draft.questions.length === 0) return;
+  const when = draft.savedAt ? new Date(draft.savedAt).toLocaleString() : 'earlier';
+  if (!confirm(`Found a saved draft from ${when}. Restore it?`)) return;
+  // note: applyDraftState() also calls renderQuestions()/renderPaper(), which is
+  // fine here since this runs before the initial render at the bottom of the script
+  applyDraftState(draft);
+}
+
+// ---- Save Exam / Load Exam: export the whole exam to a .json file the
+// teacher can keep and reopen later, on this computer or any other. ----
+async function exportExam() {
+  const state = collectDraftState();
+  const defaultName = (document.getElementById('f_title').value || 'exam').trim().replace(/[^\w\-]+/g, '_') || 'exam';
+  const json = JSON.stringify(state, null, 2);
+
+  // Modern browsers (Chrome/Edge): a real "Save As" dialog — pick name AND folder.
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: `${defaultName}.json`,
+        types: [{ description: 'Exam file', accept: { 'application/json': ['.json'] } }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(json);
+      await writable.close();
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') return; // teacher cancelled the dialog
+      // otherwise fall through to the prompt-based fallback below
+    }
+  }
+
+  // Fallback (Firefox, Safari, older browsers): ask for a name, then download normally.
+  let name = prompt('Save exam as (file name):', defaultName);
+  if (name === null) return; // cancelled
+  name = name.trim().replace(/[^\w\-]+/g, '_') || defaultName;
+
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${name}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function importExam(e) {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let draft;
+    try { draft = JSON.parse(reader.result); }
+    catch (err) { alert('This file could not be read — it may not be a valid exam file.'); return; }
+    if (!draft || !Array.isArray(draft.questions)) { alert('This file could not be read — it may not be a valid exam file.'); return; }
+    applyDraftState(draft);
+  };
+  reader.readAsText(file);
+}
+
+restoreDraftIfAny();
+
+renderQuestions();
+renderSymbolPanel();
+</script>
+</body>
+</html>
